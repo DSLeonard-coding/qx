@@ -1,0 +1,6 @@
+{
+    "python.formatting.autopep8Args": [
+        "--ignore E251,E242,E221,E222,E226,E702,E70 --max-line-length 160"
+    ],
+    "python.formatting.autopep8Path": "autopep8"
+}
