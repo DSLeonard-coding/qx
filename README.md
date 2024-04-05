@@ -9,23 +9,26 @@ qx(<cmd>,<optional args>):
     Requied arguments:  
     <cmd>   The shell command to execute and arguments, all as a single string or list of strings.  
 
-    Example usage, interpretted in sequence:  
-    from qx import *  # Note: imports qx.qx to qx  
-    qx(["echo", "Hello"])        :   prints "Hello" to screen using echo command  
-    x = qx("echo Hello").stdout  :   prints "Hello" to screen and stores "Hello" in x.   
-    qx(f"echo say {x}")          :   print  "say Hello" to screen  
-    qx.defaults(pretend=True); qx(f"echo say {x}")  :   prints  "echo say Hello" to screen.  
-                                However pretend is meant for altering program behavior.    
-                                msg() is better for just printing a message.  
+    Example usage, interpretted as if entered in sequence:  
+    qx(["echo", "Hello"])        :   runs "echo" command with "Hello" argument.  By defalt, displays output.  
+    x = qx("echo Hello").stdout  :   same, and stores output ("Hello") in x.   
+    qx(f"echo say {x}")          :   runs "echo" command with arguments "say Hello".  
+    qx.defaults(pretend=True); qx(f"echo say {x}")  : prints full command "echo say Hello" to screen
+                                                      without running it.  This is meant to temporarily 
+                                                      disable running commands,  and print them instead    
+                                                     msg() is better for just printing a message.
     x = qx("ls -1").lines        :   collects file names as a list in x.   
-                                          
+    msg("Hello")                 :  Prints hello to screen, if verbosity <= INFO. 
+    dbg("You are here.")         :  Prints "DEBUG: You are here." if verbosity <= DEBUG. (see others below)
+                                           
     USE CASES from simplest to advanced:  
+    from qx import *  # Note: imports qx.qx to qx  
 
     1) Default:  
     Just use qx(<cmd>).  Commands will be run, with output available in the return value.
 
     2) Dead-Simple:  
-    Same as 1 but at start of main() call qx.verbosity_threshold(qx.DEBUG) to print all commands and outputs.
+    Same as 1 but at start of main() call qx.verbosity_thresholds(qx.DEBUG) to print all commands and outputs.
 
     3) Easy:  
     Same as 2 but set verbose=<LEVEL> on each call to differntiate which calls will have output at each threshold.
@@ -48,14 +51,14 @@ qx(<cmd>,<optional args>):
     global threshold settings that are then increased and decreased to adjust which things will be output.  
 
     Optional args with initial defaults:  
-    out_lvl : Optional[int] = qx.DEBUG      # if >=  qx.out_thrsh,   
+    out_lvl : Optional[int] = qx.DEBUG    # if >=  qx.out_thrsh,   
                                             #   cmd stdout is printed   
-    err_lvl     : Optional[int] =  None     # if >= qx.err_thrsh,  
+    err_lvl     : Optional[int] =  None   # if >= qx.err_thrsh,  
                                             #   stderr is printed.  
-    echo_lvl    : Optional[int] =  None     # if >= qx.echo_thrsh,  
+    echo_lvl    : Optional[int] =  None       # if >= qx.echo_thrsh,  
                                             #   the <cmd> is printed.  
-    verbose     : Optional[int]  = None     #  Sets all output levels                                        
-    pretend : bool None                     #  Can override class attribute to force command to  
+    verbose     : Optional[int]  = None    #  Sets all output levels                                        
+    pretend : bool None                   #  Can override class attribute to force command to  
                                             #  run even if qx.pretend == True.  
 
     Default values are set with qx.defaults().  
@@ -100,14 +103,23 @@ Messaging Functions:  (built on command echoing and level system above)
 msg(msg,**kwargs)  
 
 takes an optional verbose or echo_lvl arg and prints msg.  
+verbosity default = INFO.
+
+dbg(msg)  
+
+Prints DEBUG: {msg} at level <= qx.DEBUG and exits  
 
 warn(msg)  
 
-Prints WARNING: {msg} at level qx.PRIORITY  
+Prints WARNING: {msg} at level <= qx.PRIORITY  
 
 error(msg)  
 
-Prints FATAL ERROR: {msg} at level qx.CRITICAL and exits  
+Prints FATAL ERROR: {msg} at level <= qx.CRITICAL and exits  
+
+trace(msg)  
+
+Prints Trace: {msg} at level <= qx.TRACE and exits  
 ```
 
 ### Installation
