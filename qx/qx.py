@@ -256,46 +256,49 @@ def qxv(cmd: Union[str, List[str]], out_lvl=qx.HIGHEST, err_lvl=qx.HIGHEST) -> '
     return output
 
 
-class msg:
-    def __new__(cls, cmd: str, verbose: Optional[int] = None, echo_lvl: Optional[int] = None):
+class Msg:
+    def __call__(self, cmd: str, verbose: Optional[int] = None, echo_lvl: Optional[int] = None):
         echo_lvl = echo_lvl if echo_lvl is not None else verbose if verbose is not None else qx.INFO
         output: 'subprocess.CompletedProcess[str]' = qx(cmd, echo_lvl=echo_lvl, pretend=True, out_lvl=qx.NEVER,
                                                         err_lvl=qx.NEVER)
         return output
+msg=Msg()
 
-
-class warn:
+class Warn:
     prefix = "WARNING: "
     level = qx.PRIORITY
 
-    @classmethod
+    @classmethod  
     def end(cls):  # stub for inheritted functionality
         pass
 
-    def __new__(cls, cmd: Union[str, List[str]]):
+    def __call__(self, cmd: Union[str, List[str]]):
         if type(cmd) is list:
-            cmd = [f"{cls.prefix}"]+cmd
+            cmd = [f"{self.prefix}"]+cmd
         elif type(cmd) is str:
-            cmd = cls.prefix+cmd
-        output: qx_out = qx(cmd, out_lvl=qx.NEVER, err_lvl=qx.NEVER, echo_lvl=cls.level, pretend=True)
+            cmd = self.prefix+cmd
+        output: qx_out = qx(cmd, out_lvl=qx.NEVER, err_lvl=qx.NEVER, echo_lvl=self.level, pretend=True)
         warn.end()
         return output
+warn=Warn()
 
-
-class error(warn):
+class Error(Warn):
     prefix = "FATAL ERROR: "
     level = qx.CRITICAL
 
-    def end(self):
+    @classmethod 
+    def end(cls):
         print("     Exiting....")
         exit(1)
+error=Error()
 
-class dbg(warn):
+class Dbg(Warn):
     prefix = "DEBUG: "
     level = qx.DEBUG
+dbg=Dbg()
 
-class trace(warn):  # For very detailed output
+class Trace(Warn):  # For very detailed output
     prefix = "DEBUG: "
     level = qx.TRACE
-
+trace=Trace()
 
