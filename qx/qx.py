@@ -310,7 +310,7 @@ class Dbg(Warn):
 dbg=Dbg()
 
 class Trace(Warn):  # For very detailed output
-    prefix = "DEBUG: "
+    prefix = "Trace: "
     level = qx.TRACE
 trace=Trace()
 
