@@ -1,4 +1,4 @@
-```text
+```
 Provides qx callable to run shell commands with subprocess.run
 
 Closest we can get to perl/shell bakcticks (command-line execution), but better.
@@ -10,7 +10,8 @@ qx(<cmd>,<optional args>):
     <cmd>   The shell command to execute and arguments, all as a single string or list of strings.  
 
     Example usage, interpretted as if entered in sequence:  
-    qx(["echo", "Hello"])        :   runs "echo" command with "Hello" argument.  By defalt, displays output.  
+    qxv(["echo", "Hello"])        :   runs "echo" command with "Hello" argument.  By defalt, displays output.
+        (  same as qx(["echo", "Hello"],out_lvl=qx.HIGHEST  )  
     x = qx("echo Hello").stdout  :   same, and stores output ("Hello") in x.   
     qx(f"echo say {x}")          :   runs "echo" command with arguments "say Hello".  
     qx.defaults(pretend=True); qx(f"echo say {x}")  : prints full command "echo say Hello" to screen

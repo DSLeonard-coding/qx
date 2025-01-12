@@ -11,7 +11,8 @@ qx(<cmd>,<optional args>):
     <cmd>   The shell command to execute and arguments, all as a single string or list of strings.  
 
     Example usage, interpretted as if entered in sequence:  
-    qx(["echo", "Hello"])        :   runs "echo" command with "Hello" argument.  By defalt, displays output.  
+    qxv(["echo", "Hello"])        :   runs "echo" command with "Hello" argument.  By defalt, displays output.
+        (  same as qx(["echo", "Hello"],out_lvl=qx.HIGHEST  )  
     x = qx("echo Hello").stdout  :   same, and stores output ("Hello") in x.   
     qx(f"echo say {x}")          :   runs "echo" command with arguments "say Hello".  
     qx.defaults(pretend=True); qx(f"echo say {x}")  : prints full command "echo say Hello" to screen
@@ -260,13 +261,12 @@ class Qx:  # lower case because it mostly behaves like a function.
 qx=Qx()
 
 
-def qxv(cmd: Union[str, List[str]], out_lvl=qx.HIGHEST, err_lvl=qx.HIGHEST) -> 'qx_out':  #
+def qxv(cmd: Union[str, List[str]], out_lvl=qx.CRITICAL, err_lvl=qx.CRITICAL) -> 'qx_out':  #
     """ 
        A shorthand wrapper for qx to pass through (print) stdout and stderr
     """
     output: qx_out = qx(cmd, out_lvl=out_lvl, err_lvl=err_lvl )
     return output
-
 
 class Msg:
     def __call__(self, cmd: str, verbose: Optional[int] = None, echo_lvl: Optional[int] = None):
