@@ -134,6 +134,7 @@ from tabnanny import verbose
 from typing import List, NoReturn, Optional, Union
 import typing
 
+
 class qx_out(subprocess.CompletedProcess):
     """ 
     Like a CompletedProcess, holds results of process, but sanitized a little
@@ -150,11 +151,11 @@ class qx_out(subprocess.CompletedProcess):
         output = cls(args=proc.args, stdout=proc.stdout,
                      stderr=proc.stderr, returncode=proc.returncode)
         output.extend()
-        return(output)
+        return (output)
 
     def extend(self) -> None:
         """ extends the CompletedProcess with sanitized output """
-        self.lines :List [str] = (self.stdout or '').splitlines()  # can't splitlines with None
+        self.lines: List[str] = (self.stdout or '').splitlines()  # can't splitlines with None
         self.errlines : List [str] = (self.stderr or '').splitlines()  # can't splitlines with None
 
 class Qx:  # lower case because it mostly behaves like a function.
@@ -205,25 +206,38 @@ class Qx:  # lower case because it mostly behaves like a function.
     def __call__(self, cmd: Union[str, List[str]], verbose: Optional[int] = None, out_lvl: Optional[int] = None,
                 err_lvl: Optional[int] = None, echo_lvl: Optional[int] = None, pretend: Optional[bool] = None
                 ) -> qx_out :  #
+                 err_lvl: Optional[int] = None, echo_lvl: Optional[int] = None, pretend: Optional[bool] = None,
+                 ) -> qx_out:  #
         """ This does the work, no instance is made """
         run: bool = True  # run the command
         self.pretend = pretend if pretend is not None else qx._pretend
         # Prioritize direct arg, then verbose arg, then default.
         # err_lvl will fall_back to out_lvl if nothing is set (including a default)
-        out_lvl = (out_lvl if out_lvl is not None
-                   else verbose if verbose is not None
-                   else qx._out_lvl)
-        err_lvl = (err_lvl if err_lvl is not None
-                   else verbose if verbose is not None
-                   else qx._err_lvl if qx._err_lvl is not None
-                   else out_lvl)
-        echo_lvl = (echo_lvl if echo_lvl is not None
-                    else verbose if verbose is not None
-                    else qx._echo_lvl if qx._echo_lvl is not None
-                    else out_lvl)
+        out_lvl = (
+            out_lvl if out_lvl is not None
+            else verbose if verbose is not None
+            else qx._out_lvl
+        )
+        err_lvl = (
+            err_lvl if err_lvl is not None
+            else verbose if verbose is not None
+            else qx._err_lvl if qx._err_lvl is not None
+            else out_lvl
+        )
+        echo_lvl = (
+            echo_lvl if echo_lvl is not None
+            else verbose if verbose is not None
+            else qx._echo_lvl if qx._echo_lvl is not None
+            else out_lvl
+        )
+        if self.pretend: # don't print empty output
+            out_lvl = self.NEVER
+            err_lvl = self.NEVER
+
         self.print = False
         self.print_cmd = False
         self.print_err = False
+        is_shell = False
         if self.pretend:
             run = False
         if out_lvl >= qx._out_thrsh:
@@ -233,18 +247,19 @@ class Qx:  # lower case because it mostly behaves like a function.
         if err_lvl >= qx._err_thrsh:
             self.print_err = True
         if type(cmd) is list:
-            shell = False
             if self.print_cmd:
                 for word in cmd:
                     print('"'+word.replace('"', r'\"')+'" ', end='')
                 print("\n")
         else:
-            shell = True
+            is_shell = True
             if self.print_cmd:
                 print(cmd, "\n")
         if run:
             output: 'subprocess.CompletedProcess[str]' = subprocess.run(
                 cmd, capture_output=True, shell=shell, text=True)
+                cmd, capture_output=True,text=True,shell=is_shell,
+            )
         else:
             output = subprocess.CompletedProcess(cmd, 0)
         # replace None outputs with empty strings
@@ -257,15 +272,15 @@ class Qx:  # lower case because it mostly behaves like a function.
         if self.print_err:
             print(output.stderr, file=sys.stderr)
             sys.stderr.flush()
-        return(output)
-qx=Qx()
+        return (output)
+qx = Qx()
 
 
 def qxv(cmd: Union[str, List[str]], out_lvl=qx.CRITICAL, err_lvl=qx.CRITICAL) -> 'qx_out':  #
     """ 
        A shorthand wrapper for qx to pass through (print) stdout and stderr
     """
-    output: qx_out = qx(cmd, out_lvl=out_lvl, err_lvl=err_lvl )
+    output: qx_out = qx(cmd, out_lvl=out_lvl, err_lvl=err_lvl)
     return output
 
 class Msg:
@@ -274,13 +289,13 @@ class Msg:
         output: 'subprocess.CompletedProcess[str]' = qx(cmd, echo_lvl=echo_lvl, pretend=True, out_lvl=qx.NEVER,
                                                         err_lvl=qx.NEVER)
         return output
-msg=Msg()
+msg = Msg()
 
 class Warn:
     prefix = "WARNING: "
     level = qx.PRIORITY
 
-    @classmethod  
+    @classmethod
     def end(cls):  # stub for inheritted functionality
         pass
 
@@ -289,28 +304,29 @@ class Warn:
             cmd = [f"{self.prefix}"]+cmd
         elif type(cmd) is str:
             cmd = self.prefix+cmd
-        output: qx_out = qx(cmd, out_lvl=qx.NEVER, err_lvl=qx.NEVER, echo_lvl=self.level, pretend=True)
+        output: qx_out = qx(cmd, out_lvl=qx.NEVER,
+                            err_lvl=qx.NEVER, echo_lvl=self.level, pretend=True)
         warn.end()
         return output
-warn=Warn()
+warn = Warn()
 
 class Error(Warn):
     prefix = "FATAL ERROR: "
     level = qx.CRITICAL
 
-    @classmethod 
+    @classmethod
     def end(cls):
         print("     Exiting....")
         exit(1)
-error=Error()
+error = Error()
 
 class Dbg(Warn):
     prefix = "DEBUG: "
     level = qx.DEBUG
-dbg=Dbg()
+dbg = Dbg()
 
 class Trace(Warn):  # For very detailed output
     prefix = "Trace: "
     level = qx.TRACE
-trace=Trace()
 
+trace = Trace()
