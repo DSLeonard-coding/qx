@@ -1,0 +1,25 @@
+name: Test
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        shell: conda-hack
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        shell: conda-hack
+        run: python3 run_tests.py

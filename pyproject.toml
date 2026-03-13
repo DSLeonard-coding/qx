@@ -37,3 +37,9 @@ packages = ["dsleonard_qx", "qx"]
 [tool.setuptools_scm]
 # Make sure qx/version.py is in your .gitignore!
 write_to = "dsleonard_qx/version.py"
+git_describe_command = "git describe --dirty --tags --long --match '*v[0-9]*'"
+#read tags like [prefix-]v1.3[.4[.5[...]]][rc0][-postfix]  only v1.3 part required
+#rc part is kept as a local metadata so v1.3rc0 satifies v1.3 in testing.
+#rc tags are not meant to be pushed to pypi.
+tag_regex = "^(?:(?P<pre>.*)-)?v(?P<version>[0-9.]+)(?:(?P<local>[a-z]+[0-9]*))?(-(?P<post>r[0-9]+))?.*$"
+
