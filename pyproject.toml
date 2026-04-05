@@ -24,8 +24,8 @@ classifiers = [
 dependencies = []
 
 [project.urls]
-"Homepage" = "https://gitlab.com/douglas_s_leonard/programming_utilities/python/qx"
-"Bug Tracker" = "https://gitlab.com/douglas.s.leonard/douglas_s_leonard/programming_utilities/python/qx"
+"Homepage" = "https://github.com/DSLeonard-coding/qx"
+"Bug Tracker" = "https://github.com/DSLeonard-coding/qx"
 
 [tool.setuptools]
 #qx is now deprecated and is just a shim:
