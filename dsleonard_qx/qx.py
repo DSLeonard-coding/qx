@@ -124,7 +124,6 @@ trace(msg)
 Prints Trace: {msg} at level <= qx.TRACE and exits
 """
 
-from curses import echo
 import errno
 from genericpath import exists
 import subprocess
