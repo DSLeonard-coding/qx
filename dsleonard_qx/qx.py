@@ -138,11 +138,15 @@ class qx_out(subprocess.CompletedProcess):
     """
     Like a CompletedProcess, holds results of process, but sanitized a little
     stdout and std err are in Lists with lines broken and newlines stripped.
+    Now is also bool, truthy on success!
     """
 
     def __init__(self, args: List[str], returncode: int, stdout=None, stderr=None):
         super().__init__(args, returncode, stdout, stderr)
         self.extend()
+
+    def __bool__(self) -> bool:
+         return self.returncode == 0
 
     @classmethod
     def from_CompletedProcess(cls, proc: subprocess.CompletedProcess) -> 'qx_out':
