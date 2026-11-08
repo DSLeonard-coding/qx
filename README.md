@@ -1,18 +1,80 @@
-```
-dsleonard-qx
+# dsleonard-qx  
+Provides qx callable to run shell commands with subprocess.run; Includes logging.  
+---
 
-Provides qx callable to run shell commands with subprocess.run
-
-Closest we can get to perl/shell bakcticks (command-line execution), but better.
+Closest we can get to perl/shell backticks (command-line execution), but better.
 Includes optional log-level control for stdout,stderr and echoing the cmd
-as well as a simple messaging interface piggy-backing on that.
+as well as a simple messaging interface piggybacking on that.
 
-qx(<cmd>,<optional args>,<passthrough args>):
-    Requied arguments:
+### Installation
+
+If you're depending on source builds, in my opinion, you need to be using the uv package manager.  It has about 30% more usage at PyPi than pip now, is faster, has many advantages, and it makes source dependency conflicts reasonable to solve in reproducible ways, particularly as the lock file automates reproducible builds of each commit.  Source overrides are also nice.  I will not try to write instructions for pip. 
+
+### Install uv if you don't have it
+```
+curl -LsSf https://astral.sh/uv/install.sh | sh    # or with pip:  pip install pipx; pip install uv
+```
+
+### Use in your custom library or app
+If you don't have a project structure configured for your app, use the [quick script](#use-in-a-quick-script) instructions below,
+or launch a new uv-based project in a few seconds with [dsleonard-pylaunch](www.github.com/DSLeonard-coding/dsleonard-pylaunch)
+
+To use dsleonard-qx in your Python program, cd to your working directory or project directory, if it's already a  project, and just do:
+```bash
+uv add "dsleonard-qx @ git+https://github.com/DSLeonard-coding/qx.git"
+uv sync   # redundant here actually.
+uv run myscript.py
+
+```
+for private repos replace ```git+https://```   with ```git+ssh://git@``` to use ssh authentication.
+
+After using uv add for source deps you are locked in to using uv as your package manager for your app going forward.  
+
+
+
+### Use in a quick script:
+The --script option will embedd the dependencies to the top of your script, avoiding the need for a pyproject.toml
+```bash
+uv add --script myscript.py "dsleonard-qx @ git+https://github.com/DSLeonard-coding/qx.git"
+```
+Then add the following uv shebang as the first line in your script file:
+```sh
+#!/usr/bin/env -S uv run --script
+```
+and just after the ```uv add```:
+```bash
+./myscript.py
+```
+
+Or if you don't like the shebang, leave it out and run with uv manually with
+```bash
+uv run --python 3.13 myscript.py    # the --python <version> is optional
+```
+
+However, if you want today's version of your script to always run with today's tested dependencies, 
+you need to commit it with an extra lock file anyway, made with:
+
+```bash
+uv lock --script myscript.py
+```
+Don't worry, future commits can be re-locked to updated dependencies.  It just makes sure
+that every commit works the same as the day you committed it.
+
+
+
+## Usage 
+```code
+qx(<cmd>,<optional args>,<passthrough args>)
+
+    Required arguments:
     <cmd>   The shell command to execute and arguments, all as a single string or list of strings.
 
-    Example usage, interpretted as if entered in sequence:
-    qxv(["echo", "Hello"])        :   runs "echo" command with "Hello" argument.  By defalt, displays output.
+    Example usage, interpreted as if entered in sequence:
+    from dsleonard_qx import *
+    # The master level on the app to let DEBUG output through, etc:
+    #qx.verbosity_thresholds(verbose_thrsh=Qx.DEBUG)    #commented for the example
+    
+    qxv(["echo", "Hello"])        :   runs "echo" command with "Hello" argument.  By default, displays output.
         (  same as qx(["echo", "Hello"],out_lvl=qx.HIGHEST  )
     x = qx("echo Hello").stdout  :   same, and stores output ("Hello") in x.
     qx(f"echo say {x}")          :   runs "echo" command with arguments "say Hello".
@@ -34,7 +96,7 @@ qx(<cmd>,<optional args>,<passthrough args>):
     Same as 1 but at start of main() call qx.verbosity_thresholds(qx.DEBUG) to print all commands and outputs.
 
     3) Easy:
-    Same as 2 but set verbose=<LEVEL> on each call to differntiate which calls will have output at each threshold.
+    Same as 2 but set verbose=<LEVEL> on each call to differentiate which calls will have output at each threshold.
     See level aliases below.
 
     4) Advanced:
@@ -54,14 +116,14 @@ qx(<cmd>,<optional args>,<passthrough args>):
     global threshold settings that are then increased and decreased to adjust which things will be output.
 
     Optional args with initial defaults:
-    out_lvl : Optional[int] = qx.DEBUG    # if >=  qx.out_thrsh,
+    out_lvl : Optional[int] = qx.DEBUG      # if >=  qx.out_thrsh,
                                             #   cmd stdout is printed
-    err_lvl     : Optional[int] =  None   # if >= qx.err_thrsh,
+    err_lvl     : Optional[int] =  None     # if >= qx.err_thrsh,
                                             #   stderr is printed.
-    echo_lvl    : Optional[int] =  None       # if >= qx.echo_thrsh,
+    echo_lvl    : Optional[int] =  None     # if >= qx.echo_thrsh,
                                             #   the <cmd> is printed.
-    verbose     : Optional[int]  = None    #  Sets all output levels
-    pretend : bool None                   #  Can override class attribute to force command to
+    verbose     : Optional[int]  = None     #  Sets all output levels
+    pretend : bool None                     #  Can override class attribute to force command to
                                             #  run even if qx.pretend == True.
 
     Passthrough args:
@@ -85,17 +147,17 @@ qx.verbosity_thresholds(verbose_thrsh, out_thrsh=None,err_thrsh=None,echo_thrsh=
     out_thrsh:     int = INFO    # Threshold for output of stdout
     err_thrsh:     int = INFO    # Threshold for output of stderr
     echo_thrsh:    int = INFO    # Threshold for printing command to stdout
-    verbose_thrsh  int = NONE    # Just an alias to set all three above thresholds
+    verbose_thrsh:  default: None    # Just an alias to set all three above thresholds
 
     NOTE: Unset options are set to out_thrsh after out_thrsh is set or defaulted.
 
 
-    Threshold aliases, names are intentionally a little different
-    Since the use is for important command output, not necessarily warnings and errors.
+    Threshold aliases, names are intentionally a little different than usual,
+    since the use is for importance of command output, not necessarily warnings and errors.
     qx.NEVER = 0       # Stuff that should never be output, makes sense in context of 3 channels of output.
-    qx.TRACE = 10      # Things to print at high versobisty
-    qx.DEBUG = 20      # Debugging iformation
-    qx.INFO = 30       # Stanardard
+    qx.TRACE = 10      # Things to print at high verbosity
+    qx.DEBUG = 20      # Debugging information
+    qx.INFO = 30       # Standard
     qx.PRIORITY = 40   # Only High Priority messages, ex: warnings.
     qx.CRITICAL = 50   # For fatal errors for example
     qx.HIGHEST = 100   # Probably no messages should have this level.
@@ -103,7 +165,7 @@ qx.verbosity_thresholds(verbose_thrsh, out_thrsh=None,err_thrsh=None,echo_thrsh=
                         # But that is not enforced.
 
 qxv(...)
-    Just a shortcut to qx but with verbose = True by default.
+    Just a shortcut to qx but with verbose = Qx.CRITICAL by default.
 
 Messaging Functions:  (built on command echoing and level system above)
 msg(msg,**kwargs)
@@ -113,71 +175,37 @@ verbosity default = INFO.
 
 dbg(msg)
 
-Prints DEBUG: {msg} at level <= qx.DEBUG and exits
+Prints DEBUG: {msg} at threshold <= Qx.DEBUG and exits
 
 warn(msg)
 
-Prints WARNING: {msg} at level <= qx.PRIORITY
+Prints WARNING: {msg} at threshold <= Qx.PRIORITY
 
 error(msg)
 
-Prints FATAL ERROR: {msg} at level <= qx.CRITICAL and exits
+Prints FATAL ERROR: {msg} at threshold <= Qx.CRITICAL and exits
 
 trace(msg)
 
-Prints Trace: {msg} at level <= qx.TRACE and exits
+Prints Trace: {msg} at threshold <= Qx.TRACE and exits
 ```
 
-### Installation
+## Instantiation and qx in libraries within apps
 
-Directly from git:
-```sh
-pip install git+https://gitlab.com/douglas.s.leonard/qx.git@v1
-```
-@master if you want the latest, or use @v1.1.1 or such if you want to pin that version for stability.
-You can instead use git clone and then from the root directory:
-```sh
-pip install .
-```
+By default, qx creates a single qx instance and provides helper names in your scope to access its methods.  The instance holds the output levels, and the global class holds the thresholds.  Thresholds should generally only be set by an app.
 
-or just add it directly to your pyproject.toml or use uv to add it:
-```sh
-uv add git+https://gitlab.com/douglas.s.leonard/qx.git@v1
-```
-
-To avoid full installation of your script, use uv to create the pyproject.toml, a virtual env and run your script:
-```sh
-# create pyproject.toml:
-uv init --python 3.12 --bare
-
-#add dependency:
-uv add git+https://gitlab.com/douglas.s.leonard/qx.git@v1
-
-#  create a virtual evnironment from ./pyproject.toml with dependency installed:
-uv sync
-
-#run your script in that virtual environment:
-uv run my_script.py
-```
-
-from a python script requiring it you could even guarantee installation this way at the top:
+You can instantiate instances in your libraries to avoid passing around qx objects and/or to set different default output level policies.
 
 ```python
-def install(package, ver: Optional[str] = None, source=None):
-    ''' version requires a comparator and value, ex: ">1.0"'''
-    if source is None:
-        source = package
-    try:
-        temp_pkg = __import__(package)
-        if ver:
-            if not eval(f'"{{{temp_pkg}.__version__}}" "{ver}"'):
-                raise Exception()
-    except:
-        subprocess.check_call([sys.executable, "-m", "pip", "install", "--upgrade", source])
+from dsleonard_qx  import Qx
 
-
-if __name__ == "__main__":
-    install("dsleonard-qx", source="https://gitlab.com/douglas.s.leonard/qx@v1", ver=">=1.1")
+qx=Qx().defaults(out_lvl=Qx.INFO).expose()  # if most of your output is for standard use.
 ```
+This creates a new Qx instance, sets the level defaults, exposes the helper methods to your namespace, and assigns the instance to qx.
 
-It's ugly, but people can run your script without installation.
+You omit .expose() and you'd just use qx.msg("Hello") instead of msg("Hello")
+
+Then, as before, within an app you set the verbosity of the app:
+```
+qx.verbosity_thresholds(verbose_thrsh=Qx.DEBUG) 
+```
