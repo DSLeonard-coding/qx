@@ -6,133 +6,25 @@ Closest we can get to perl/shell bakcticks (command-line execution), but better.
 Includes optional log-level control for stdout,stderr and echoing the cmd
 as well as a simple messaging interface piggy-backing on that.
 
-qx(<cmd>,<optional args>):
-    Requied arguments:
-    <cmd>   The shell command to execute and arguments, all as a single string or list of strings.
-
-    Example usage, interpretted as if entered in sequence:
-    qxv(["echo", "Hello"])        :   runs "echo" command with "Hello" argument.  By defalt, displays output.
-        (  same as qx(["echo", "Hello"],out_lvl=qx.HIGHEST  )
-    x = qx("echo Hello").stdout  :   same, and stores output ("Hello") in x.
-    qx(f"echo say {x}")          :   runs "echo" command with arguments "say Hello".
-    qx.defaults(pretend=True); qx(f"echo say {x}")  : prints full command "echo say Hello" to screen
-                                                      without running it.  This is meant to temporarily
-                                                      disable running commands,  and print them instead
-                                                     msg() is better for just printing a message.
-    x = qx("ls -1").lines        :   collects file names as a list in x.
-    msg("Hello")                 :  Prints hello to screen, if verbosity <= INFO.
-    dbg("You are here.")         :  Prints "DEBUG: You are here." if verbosity <= DEBUG. (see others below)
-
-    USE CASES from simplest to advanced:
-    from qx import *  # Note: imports qx.qx to qx
-
-    1) Default:
-    Just use qx(<cmd>).  Commands will be run, with output available in the return value.
-
-    2) Dead-Simple:
-    Same as 1 but at start of main() call qx.verbosity_thresholds(qx.DEBUG) to print all commands and outputs.
-
-    3) Easy:
-    Same as 2 but set verbose=<LEVEL> on each call to differntiate which calls will have output at each threshold.
-    See level aliases below.
-
-    4) Advanced:
-    For more control just call qx.defaults(out_lvl=qx.<X>,echo_lvl=qx.<Y>), not err_lvl,
-    and  then err_lvl will track out_lvl for per-call adjustments (because it has no default).
-    Actually this is true even without setting defaults at all, but then you get the default default of DEBUG
-    and both err_lvl and echo_lvl will track out_lvl if they are not explicitly set on each call to qx
-
-    Return value (via call to qx() ):
-    a qx_out object, an extended CompletedProcess,  with attributes of: stdout, stderr, returncode, args,
-    and check_returncode(). Also includes lines and errlines list attributes with output lines split and
-    newlines removed. These always contain at least an empty list, not None.
-
-    qx uses a typical log-level system for output verbosity for printing the command itself and its
-    stdout and stderr, with independent controls for all three or simplified combined controls. (See USE CASES below)
-    Each call optionally sets the "importance" level for all three outputs which are compared to the corresponding
-    global threshold settings that are then increased and decreased to adjust which things will be output.
-
-    Optional args with initial defaults:
-    out_lvl : Optional[int] = qx.DEBUG    # if >=  qx.out_thrsh,
-                                            #   cmd stdout is printed
-    err_lvl     : Optional[int] =  None   # if >= qx.err_thrsh,
-                                            #   stderr is printed.
-    echo_lvl    : Optional[int] =  None       # if >= qx.echo_thrsh,
-                                            #   the <cmd> is printed.
-    verbose     : Optional[int]  = None    #  Sets all output levels
-    pretend : bool None                   #  Can override class attribute to force command to
-                                            #  run even if qx.pretend == True.
-
-    Default values are set with qx.defaults().
-    For each call...
-    err_lvl will be set to the first non-None value in the list:
-                err_lvl, verbose, qx.err_lvl (class default), out_lvl
-    echo_lvl will be set to the first non-None value in:
-                echo_lvl, verbose, qx.echo_lvl (class default), out_lvl
-    out_lvl will be set to the first non-None value in:
-                out_lvl, verbose, qx.out_lvl (if modified), DEBUG (initial default),
-    If nothing is set, everything defaults to DEBUG via fallback through out_lvl,
-    and no output will be emitted unless the thresholds are also raised to at least DEBUG.
-
-
-qx.verbosity_thresholds(verbose_thrsh, out_thrsh=None,err_thrsh=None,echo_thrsh=None,):
-    Sets the following verbosity levels (with initial values):
-
-    out_thrsh:     int = INFO    # Threshold for output of stdout
-    err_thrsh:     int = INFO    # Threshold for output of stderr
-    echo_thrsh:    int = INFO    # Threshold for printing command to stdout
-    verbose_thrsh  int = NONE    # Just an alias to set all three above thresholds
-
-    NOTE: Unset options are set to out_thrsh after out_thrsh is set or defaulted.
-
-
-    Threshold aliases, names are intentionally a little different
-    Since the use is for important command output, not necessarily warnings and errors.
-    qx.NEVER = 0       # Stuff that should never be output, makes sense in context of 3 channels of output.
-    qx.TRACE = 10      # Things to print at high versobisty
-    qx.DEBUG = 20      # Debugging iformation
-    qx.INFO = 30       # Stanardard
-    qx.PRIORITY = 40   # Only High Priority messages, ex: warnings.
-    qx.CRITICAL = 50   # For fatal errors for example
-    qx.HIGHEST = 100   # Probably no messages should have this level.
-                        # So setting the threshold to HIGHEST can produce silence.
-                        # But that is not enforced.
-
-qxv(...)
-    Just a shortcut to qx but with verbose = True by default.
-
-Messaging Functions:  (built on command echoing and level system above)
-msg(msg,**kwargs)
-
-takes an optional verbose or echo_lvl arg and prints msg.
-verbosity default = INFO.
-
-dbg(msg)
-
-Prints DEBUG: {msg} at level <= qx.DEBUG and exits
-
-warn(msg)
-
-Prints WARNING: {msg} at level <= qx.PRIORITY
-
-error(msg)
-
-Prints FATAL ERROR: {msg} at level <= qx.CRITICAL and exits
-
-trace(msg)
-
-Prints Trace: {msg} at level <= qx.TRACE and exits
+See included README.md for full details
 """
 
-import errno
-from genericpath import exists
 import subprocess
-import os
 import sys
-from tabnanny import verbose
-from typing import List, NoReturn, Optional, Union
-import typing
+from typing import List, Optional, Union
 
+__all__ = [
+    # Core execution
+    "qx",
+    "Qx",
+    "qx_out",
+    "qxv",
+    "msg",
+    "warn",
+    "error",
+    "dbg",
+    "trace",
+]
 
 class qx_out(subprocess.CompletedProcess):
     """
@@ -140,6 +32,7 @@ class qx_out(subprocess.CompletedProcess):
     stdout and std err are in Lists with lines broken and newlines stripped.
     Now is also bool, truthy on success!
     """
+
 
     def __init__(self, args: List[str], returncode: int, stdout=None, stderr=None):
         super().__init__(args, returncode, stdout, stderr)
@@ -153,7 +46,6 @@ class qx_out(subprocess.CompletedProcess):
         """Build directly from a CompletedProcess, the primary use"""
         output = cls(args=proc.args, stdout=proc.stdout,
                      stderr=proc.stderr, returncode=proc.returncode)
-        output.extend()
         return (output)
 
     def extend(self) -> None:
@@ -161,9 +53,67 @@ class qx_out(subprocess.CompletedProcess):
         self.lines: List[str] = (self.stdout or '').splitlines()  # can't splitlines with None
         self.errlines : List [str] = (self.stderr or '').splitlines()  # can't splitlines with None
 
+
+    @property
+    def rstripped(self) -> str:
+        """stdout without trailing whitespace; '' if there was no output.
+        It's good for string assignment that needs empty to be \"\" """
+        return (self.stdout or '').rstrip()
+
+#Can't do inheritance easily as subclasses.  Define inheritted helpers here, instantiate in Qx:
+
+class Warn:
+    prefix = "WARNING: "
+
+    def __init__(self, qx_instance):
+        self.qx = qx_instance
+        self.level = self.qx.PRIORITY
+
+    @classmethod
+    def end(cls):  # stub for inheritted functionality
+        pass
+
+    def __call__(self, cmd: Union[str, List[str]]):
+        if isinstance(cmd, list):
+            cmd = [f"{self.prefix}"]+cmd
+        elif isinstance(cmd, str):
+            cmd = self.prefix+cmd
+        output: qx_out = self.qx(
+            cmd,
+            out_lvl=self.qx.NEVER,
+            err_lvl=self.qx.NEVER,
+            echo_lvl=self.level,
+            pretend=True
+        )
+        self.end()
+        return output
+
+
+class Error(Warn):
+    prefix = "FATAL ERROR: "
+    def __init__(self, qx_instance):
+        super().__init__(qx_instance)
+        self.level = self.qx.CRITICAL
+
+    @classmethod
+    def end(cls):
+        raise Qx.Fatal("     Fatal Error....")
+
+class Dbg(Warn):
+    prefix = "DEBUG: "
+    def __init__(self, qx_instance):
+        super().__init__(qx_instance)
+        self.level = self.qx.DEBUG
+
+
+class Trace(Warn):  # For very detailed output
+    prefix = "Trace: "
+    def __init__(self, qx_instance):
+        super().__init__(qx_instance)
+        self.level = self.qx.TRACE
+
 class Qx:  # lower case because it mostly behaves like a function.
 
-    _pretend: Optional[bool] = False  # only print cmd, don't run,
 
     # Stuff that should never be output, makes sense in context of 3 channels of output.
     NEVER = 0
@@ -175,16 +125,39 @@ class Qx:  # lower case because it mostly behaves like a function.
     HIGHEST = 100   # Probably no messages should have this level.
     # So setting the threshold to HIGHEST can produce silence.
     # But that is not enforced.
+    _OUT_LVL_DEFAULT = DEBUG
+    _out_thrsh: int = INFO  # Threshold for output of stdout/stderr
+    _echo_thrsh: int = INFO  # Threshold for printing command to stdout
+    _err_thrsh: int = INFO  #
 
-    _out_thrsh:  int = INFO    # Threshold for output of stdout/stderr
-    _echo_thrsh:  int = INFO    # Threshold for printing command to stdout
-    _err_thrsh:  int = INFO    #
 
-    # Default output levels for commands,
-    # Overrideable on each call:
-    _out_lvl:  int = DEBUG
-    _echo_lvl:  Optional[int] = None
-    _err_lvl:  Optional[int] = None
+    def __init__(self, out_lvl=None, echo_lvl=None, err_lvl=None, pretend=None):
+        #  Thresholds are global, levels are instance
+        # Document default output levels for commands, overrideable on each call:
+        self._out_lvl: int
+        self._echo_lvl: Optional[int]
+        self._err_lvl: Optional[int]
+        self._pretend: Optional[bool]
+
+        # Real initialization is here:
+        self.defaults(out_lvl, echo_lvl, err_lvl, pretend)
+
+        # Instance-bound messaging helpers
+        self.warn = Warn(self)
+        self.error = Error(self)
+        self.dbg = Dbg(self)
+        self.trace = Trace(self)
+
+    class Fatal(Exception):
+        pass
+
+    def expose(self):
+        """Automatically injects msg, warn, error, dbg, and trace into the caller's module globals."""
+        caller_globals = sys._getframe(1).f_globals
+        g = sys._getframe(1).f_globals
+        for name in ("msg", "qxv", "warn", "error", "dbg", "trace"):
+            g[name] = getattr(self, name)
+        return self
 
     @classmethod
     def verbosity_thresholds(cls, verbose_thrsh: Optional[int] = None, out_thrsh: Optional[int] = None,
@@ -197,66 +170,62 @@ class Qx:  # lower case because it mostly behaves like a function.
         cls._err_thrsh = (verbose_thrsh if verbose_thrsh is not None
                           else err_thrsh if err_thrsh is not None else cls._out_thrsh)
 
-    @classmethod
-    def defaults(cls, out_lvl: Optional[int], echo_lvl: Optional[int] = None,
-                 err_lvl: Optional[int] = None, pretend: Optional[bool] = None) -> None:
+    def defaults(self, out_lvl: Optional[int] = None, echo_lvl: Optional[int] = None,
+                 err_lvl: Optional[int] = None, pretend: Optional[bool] = None) -> 'Qx':
         """ Sets defatuls for qx including output levels"""
-        cls._out_lvl = out_lvl if out_lvl is not None else qx._out_lvl
-        cls._err_lvl = err_lvl
-        cls._echo_lvl = echo_lvl
-        cls._pretend = pretend
+        self._out_lvl = out_lvl if out_lvl is not None else self._OUT_LVL_DEFAULT
+        self._err_lvl = err_lvl
+        self._echo_lvl = echo_lvl
+        self._pretend = pretend
+        return self
 
     def __call__(self, cmd: Union[str, List[str]], verbose: Optional[int] = None, out_lvl: Optional[int] = None,
                  err_lvl: Optional[int] = None, echo_lvl: Optional[int] = None, pretend: Optional[bool] = None,
+                 echo_end="\n\n",
                  **kwargs
                  ) -> qx_out:  #
         """ This does the work, no instance is made """
         run: bool = True  # run the command
-        self.pretend = pretend if pretend is not None else qx._pretend
+        pretend = pretend if pretend is not None else self._pretend
         # Prioritize direct arg, then verbose arg, then default.
         # err_lvl will fall_back to out_lvl if nothing is set (including a default)
         out_lvl = (
             out_lvl if out_lvl is not None
             else verbose if verbose is not None
-            else qx._out_lvl
+            else self._out_lvl
         )
         err_lvl = (
             err_lvl if err_lvl is not None
             else verbose if verbose is not None
-            else qx._err_lvl if qx._err_lvl is not None
-            else out_lvl
+            else self._err_lvl if self._err_lvl is not None
+            else out_lvl  # already set above, not None now.
         )
         echo_lvl = (
             echo_lvl if echo_lvl is not None
             else verbose if verbose is not None
-            else qx._echo_lvl if qx._echo_lvl is not None
-            else out_lvl
+            else self._echo_lvl if self._echo_lvl is not None
+            else out_lvl # already set above, not None now.
         )
-        if self.pretend: # don't print empty output
+        if pretend: # don't print empty output
             out_lvl = self.NEVER
             err_lvl = self.NEVER
 
-        self.print = False
-        self.print_cmd = False
-        self.print_err = False
-        is_shell = False
-        if self.pretend:
+        do_print = False
+        print_cmd = False
+        print_err = False
+        is_shell = isinstance(cmd,str)
+        if pretend:
             run = False
-        if out_lvl >= qx._out_thrsh:
-            self.print = True
-        if echo_lvl >= qx._echo_thrsh:
-            self.print_cmd = True
-        if err_lvl >= qx._err_thrsh:
-            self.print_err = True
-        if type(cmd) is list:
-            if self.print_cmd:
-                for word in cmd:
-                    print('"'+word.replace('"', r'\"')+'" ', end='')
-                print("\n")
-        else:
-            is_shell = True
-            if self.print_cmd:
-                print(cmd, "\n")
+        if out_lvl >= self._out_thrsh:
+            do_print = True
+        if echo_lvl >= self._echo_thrsh:
+            print_cmd = True
+        if err_lvl >= self._err_thrsh:
+            print_err = True
+        if print_cmd:
+            shown = cmd if isinstance(cmd, str) else " ".join(
+                '"' + w.replace('"', r'\"') + '"' for w in cmd)
+            print(shown, end=echo_end)
         if run:
             output: 'subprocess.CompletedProcess[str]' = subprocess.run(
                 cmd, capture_output=True,text=True,shell=is_shell,
@@ -268,67 +237,32 @@ class Qx:  # lower case because it mostly behaves like a function.
         output = qx_out.from_CompletedProcess(output)
         # FIXME:  We need popen above and two async reader threads here
         # This solution is kind of a quick hack
-        if self.print:
-            print(output.stdout)
+        if do_print and output.stdout:
+            sys.stdout.write(output.stdout+"\n")
             sys.stdout.flush()
-        if self.print_err:
-            print(output.stderr, file=sys.stderr)
+        if print_err and output.stderr:
+            sys.stderr.write(output.stderr+"\n")
             sys.stderr.flush()
         return (output)
+
+    def qxv(self, cmd: Union[str, List[str]], out_lvl=CRITICAL, err_lvl=CRITICAL) -> 'qx_out':  #
+        """
+           A shorthand wrapper for qx to pass through (print) stdout and stderr
+        """
+        output: qx_out = self(cmd, out_lvl=out_lvl, err_lvl=err_lvl)
+        return output
+
+    def msg(self, cmd: str, verbose: Optional[int] = None, echo_lvl: Optional[int] = None):
+        echo_lvl = echo_lvl if echo_lvl is not None else verbose if verbose is not None else Qx.INFO
+        output: 'subprocess.CompletedProcess[str]' = self(cmd, echo_lvl=echo_lvl, pretend=True, out_lvl=Qx.NEVER,
+                                                        err_lvl=Qx.NEVER,echo_end="\n")
+        return output
+
+#Export a default singleton and helper aliases for backward compatibility:
 qx = Qx()
-
-
-def qxv(cmd: Union[str, List[str]], out_lvl=qx.CRITICAL, err_lvl=qx.CRITICAL) -> 'qx_out':  #
-    """
-       A shorthand wrapper for qx to pass through (print) stdout and stderr
-    """
-    output: qx_out = qx(cmd, out_lvl=out_lvl, err_lvl=err_lvl)
-    return output
-
-class Msg:
-    def __call__(self, cmd: str, verbose: Optional[int] = None, echo_lvl: Optional[int] = None):
-        echo_lvl = echo_lvl if echo_lvl is not None else verbose if verbose is not None else qx.INFO
-        output: 'subprocess.CompletedProcess[str]' = qx(cmd, echo_lvl=echo_lvl, pretend=True, out_lvl=qx.NEVER,
-                                                        err_lvl=qx.NEVER)
-        return output
-msg = Msg()
-
-class Warn:
-    prefix = "WARNING: "
-    level = qx.PRIORITY
-
-    @classmethod
-    def end(cls):  # stub for inheritted functionality
-        pass
-
-    def __call__(self, cmd: Union[str, List[str]]):
-        if type(cmd) is list:
-            cmd = [f"{self.prefix}"]+cmd
-        elif type(cmd) is str:
-            cmd = self.prefix+cmd
-        output: qx_out = qx(cmd, out_lvl=qx.NEVER,
-                            err_lvl=qx.NEVER, echo_lvl=self.level, pretend=True)
-        warn.end()
-        return output
-warn = Warn()
-
-class Error(Warn):
-    prefix = "FATAL ERROR: "
-    level = qx.CRITICAL
-
-    @classmethod
-    def end(cls):
-        print("     Exiting....")
-        exit(1)
-error = Error()
-
-class Dbg(Warn):
-    prefix = "DEBUG: "
-    level = qx.DEBUG
-dbg = Dbg()
-
-class Trace(Warn):  # For very detailed output
-    prefix = "Trace: "
-    level = qx.TRACE
-
-trace = Trace()
+qxv = qx.qxv
+msg = qx.msg
+warn = qx.warn
+error = qx.error
+dbg = qx.dbg
+trace = qx.trace
