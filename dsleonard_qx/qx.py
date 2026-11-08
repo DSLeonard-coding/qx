@@ -181,6 +181,7 @@ class Qx:  # lower case because it mostly behaves like a function.
 
     def __call__(self, cmd: Union[str, List[str]], verbose: Optional[int] = None, out_lvl: Optional[int] = None,
                  err_lvl: Optional[int] = None, echo_lvl: Optional[int] = None, pretend: Optional[bool] = None,
+                 echo_end="\n\n",
                  **kwargs
                  ) -> qx_out:  #
         """ This does the work, no instance is made """
@@ -212,7 +213,7 @@ class Qx:  # lower case because it mostly behaves like a function.
         do_print = False
         print_cmd = False
         print_err = False
-        is_shell = False
+        is_shell = isinstance(cmd,str)
         if pretend:
             run = False
         if out_lvl >= self._out_thrsh:
@@ -221,15 +222,10 @@ class Qx:  # lower case because it mostly behaves like a function.
             print_cmd = True
         if err_lvl >= self._err_thrsh:
             print_err = True
-        if type(cmd) is list:
-            if print_cmd:
-                for word in cmd:
-                    print('"'+word.replace('"', r'\"')+'" ', end='')
-                print("\n")
-        else:
-            is_shell = True
-            if print_cmd:
-                print(cmd, "\n")
+        if print_cmd:
+            shown = cmd if isinstance(cmd, str) else " ".join(
+                '"' + w.replace('"', r'\"') + '"' for w in cmd)
+            print(shown, end=echo_end)
         if run:
             output: 'subprocess.CompletedProcess[str]' = subprocess.run(
                 cmd, capture_output=True,text=True,shell=is_shell,
@@ -241,11 +237,11 @@ class Qx:  # lower case because it mostly behaves like a function.
         output = qx_out.from_CompletedProcess(output)
         # FIXME:  We need popen above and two async reader threads here
         # This solution is kind of a quick hack
-        if do_print:
-            print(output.stdout)
+        if do_print and output.stdout:
+            sys.stdout.write(output.stdout+"\n")
             sys.stdout.flush()
-        if print_err:
-            print(output.stderr, file=sys.stderr)
+        if print_err and output.stderr:
+            sys.stderr.write(output.stderr+"\n")
             sys.stderr.flush()
         return (output)
 
@@ -259,7 +255,7 @@ class Qx:  # lower case because it mostly behaves like a function.
     def msg(self, cmd: str, verbose: Optional[int] = None, echo_lvl: Optional[int] = None):
         echo_lvl = echo_lvl if echo_lvl is not None else verbose if verbose is not None else Qx.INFO
         output: 'subprocess.CompletedProcess[str]' = self(cmd, echo_lvl=echo_lvl, pretend=True, out_lvl=Qx.NEVER,
-                                                        err_lvl=Qx.NEVER)
+                                                        err_lvl=Qx.NEVER,echo_end="\n")
         return output
 
 #Export a default singleton and helper aliases for backward compatibility:
