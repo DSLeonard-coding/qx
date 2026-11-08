@@ -167,7 +167,6 @@ class qx_out(subprocess.CompletedProcess):
         """Build directly from a CompletedProcess, the primary use"""
         output = cls(args=proc.args, stdout=proc.stdout,
                      stderr=proc.stderr, returncode=proc.returncode)
-        output.extend()
         return (output)
 
     def extend(self) -> None:
