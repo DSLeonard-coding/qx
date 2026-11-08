@@ -134,6 +134,18 @@ from tabnanny import verbose
 from typing import List, NoReturn, Optional, Union
 import typing
 
+__all__ = [
+    # Core execution
+    "qx",
+    "Qx",
+    "qx_out",
+    "qxv",
+    "msg",
+    "warn",
+    "error",
+    "dbg",
+    "trace",
+]
 
 class qx_out(subprocess.CompletedProcess):
     """
@@ -195,6 +207,9 @@ class Qx:  # lower case because it mostly behaves like a function.
     _out_lvl:  int = DEBUG
     _echo_lvl:  Optional[int] = None
     _err_lvl:  Optional[int] = None
+
+    class Fatal(Exception):
+        pass
 
     @classmethod
     def verbosity_thresholds(cls, verbose_thrsh: Optional[int] = None, out_thrsh: Optional[int] = None,
@@ -322,8 +337,6 @@ class Warn:
         return output
 warn = Warn()
 
-class Fatal(Exception):
-    pass
 
 class Error(Warn):
     prefix = "FATAL ERROR: "
@@ -331,7 +344,7 @@ class Error(Warn):
 
     @classmethod
     def end(cls):
-        raise Fatal("     Fatal Error....")
+        raise Qx.Fatal("     Fatal Error....")
 error = Error()
 
 class Dbg(Warn):
