@@ -154,11 +154,10 @@ class Qx:  # lower case because it mostly behaves like a function.
     def expose(self):
         """Automatically injects msg, warn, error, dbg, and trace into the caller's module globals."""
         caller_globals = sys._getframe(1).f_globals
-        caller_globals['msg'] = self.msg
-        caller_globals['warn'] = self.warn
-        caller_globals['error'] = self.error
-        caller_globals['dbg'] = self.dbg
-        caller_globals['trace'] = self.trace
+        g = sys._getframe(1).f_globals
+        for name in ("msg", "qxv", "warn", "error", "dbg", "trace"):
+            g[name] = getattr(self, name)
+        return self
 
     @classmethod
     def verbosity_thresholds(cls, verbose_thrsh: Optional[int] = None, out_thrsh: Optional[int] = None,
@@ -172,12 +171,13 @@ class Qx:  # lower case because it mostly behaves like a function.
                           else err_thrsh if err_thrsh is not None else cls._out_thrsh)
 
     def defaults(self, out_lvl: Optional[int] = None, echo_lvl: Optional[int] = None,
-                 err_lvl: Optional[int] = None, pretend: Optional[bool] = None) -> None:
+                 err_lvl: Optional[int] = None, pretend: Optional[bool] = None) -> 'Qx':
         """ Sets defatuls for qx including output levels"""
         self._out_lvl = out_lvl if out_lvl is not None else self._OUT_LVL_DEFAULT
         self._err_lvl = err_lvl
         self._echo_lvl = echo_lvl
         self._pretend = pretend
+        return self
 
     def __call__(self, cmd: Union[str, List[str]], verbose: Optional[int] = None, out_lvl: Optional[int] = None,
                  err_lvl: Optional[int] = None, echo_lvl: Optional[int] = None, pretend: Optional[bool] = None,
