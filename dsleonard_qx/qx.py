@@ -13,9 +13,10 @@ qx(<cmd>,<optional args>):
     Example usage, interpretted as if entered in sequence:
     qxv(["echo", "Hello"])        :   runs "echo" command with "Hello" argument.  By defalt, displays output.
         (  same as qx(["echo", "Hello"],out_lvl=qx.HIGHEST  )
-    x = qx("echo Hello").stdout  :   same, and stores output ("Hello") in x.
-    qx(f"echo say {x}")          :   runs "echo" command with arguments "say Hello".
-    qx.defaults(pretend=True); qx(f"echo say {x}")  : prints full command "echo say Hello" to screen
+    x = qx("echo Hello \n").stdout  :   same, and stores output ("Hello \n") in x.
+    y = qx("echo Hello \n").rstripped  :   same but right-stripped, stores ("Hello") in y.
+    qx(f"echo say {y}")          :   runs "echo" command with arguments "say Hello".
+    qx.defaults(pretend=True); qx(f"echo say {y}")  : prints full command "echo say Hello" to screen
                                                       without running it.  This is meant to temporarily
                                                       disable running commands,  and print them instead
                                                      msg() is better for just printing a message.
@@ -141,6 +142,7 @@ class qx_out(subprocess.CompletedProcess):
     Now is also bool, truthy on success!
     """
 
+
     def __init__(self, args: List[str], returncode: int, stdout=None, stderr=None):
         super().__init__(args, returncode, stdout, stderr)
         self.extend()
@@ -160,6 +162,14 @@ class qx_out(subprocess.CompletedProcess):
         """ extends the CompletedProcess with sanitized output """
         self.lines: List[str] = (self.stdout or '').splitlines()  # can't splitlines with None
         self.errlines : List [str] = (self.stderr or '').splitlines()  # can't splitlines with None
+
+
+    @property
+    def rstripped(self) -> str:
+        """stdout without trailing whitespace; '' if there was no output.
+        It's good for string assignment that needs empty to be \"\" """
+        return (self.stdout or '').rstrip()
+
 
 class Qx:  # lower case because it mostly behaves like a function.
 
@@ -312,14 +322,16 @@ class Warn:
         return output
 warn = Warn()
 
+class Fatal(Exception):
+    pass
+
 class Error(Warn):
     prefix = "FATAL ERROR: "
     level = qx.CRITICAL
 
     @classmethod
     def end(cls):
-        print("     Exiting....")
-        exit(1)
+        raise Fatal("     Fatal Error....")
 error = Error()
 
 class Dbg(Warn):
